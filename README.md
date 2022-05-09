@@ -52,8 +52,8 @@ Getting Started
       // code, which is for new versions only ...
     } 
     // show versions of node and protocol
-    echo("### nodeversion: $chain->nodeversion\r\n");
-    echo("### protocolversion: $chain->protocolversion\r\n");
+    echo("### nodeversion: $chain->nodeVersion\r\n");
+    echo("### protocolversion: $chain->protocolVersion\r\n");
     ```
 
 Additional Info
