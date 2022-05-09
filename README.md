@@ -17,7 +17,7 @@ Getting Started
 2. Initialize MultiChain connection/object:
 
     ```php
-    $MultiChain = new MultiChain('username','password','localhost','2286');
+    $MultiChain = new MultiChain('username','password','localhost','2286', null, 5);
     ```
     
     Check, if initialization worked (i.e. curl is installed)
@@ -44,13 +44,16 @@ Getting Started
     $MultiChain->getblock('000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f');
     ```
     
-    If you called 'getinfo()' at least once, the major version of multichaind is set as integer in $this->versionMajor
+    If you called 'getinfo()' at least once, the major version of multichaind is set as integer in $this->versionMajor as well as $this->nodeversion and $this->protocolversion
     
     ```php    
     $res = $MultiChain->getinfo();
     if ($MultiChain->versionMajor == 2) {
       // code, which is for new versions only ...
     } 
+    // show versions of node and protocol
+    echo("### nodeversion: $chain->nodeversion\r\n");
+    echo("### protocolversion: $chain->protocolversion\r\n");
     ```
 
 Additional Info

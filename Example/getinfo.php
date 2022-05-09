@@ -7,7 +7,7 @@ require_once('config.php');
 require_once('multichain-api.php');
 
 // initialize RPC connection to Multichain Instance
-$chain = new MultiChain($cfg->rpcUser, $cfg->rpcPass, $cfg->rpcHost, $cfg->rpcPort);
+$chain = new MultiChain($cfg->rpcUser, $cfg->rpcPass, $cfg->rpcHost, $cfg->rpcPort, $cfg->rpcPath, $cfg->timeout);
 
 // check for initialization errors (e.g. curl not available)
 if (!$chain->initOK) {
