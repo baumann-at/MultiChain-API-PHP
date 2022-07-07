@@ -5,6 +5,7 @@ Copyright (c) 2018 baumann.at
 V 1.0 (6.10.2018)
 V 1.1 (21.11.2018): new property "timeout" for socket connection
 V 1.2 (9.5.2022): documentation for params path and timeout; read nodeversion & protocolversion in call of getinfo()
+V 1.3 (7.7.2022): error messages for http status 0 and any other not defined so far
 
 Forked from EasyBitcoin-PHP, Copyright (c) 2013 Andrew LeCody
 https://github.com/aceat64/EasyMultiChain-PHP
@@ -38,18 +39,17 @@ THE SOFTWARE.
 // Initialize MultiChain connection/object
 $MultiChain = new MultiChain('username','password','host','port', 'path', 'timeout');
 // Defaults are:
-//	host = localhost
-//	port = 2286
-//	proto = http
+//    host = localhost
+//    port = 2286
+//    proto = http
 //  path = null
 //  timeout = 10
 
 // Check, if initialization worked (i.e. curl is installed)
 if (!$MultiChain->initOK) {
-	echo($MultiChain->error);
-	exit();
+echo($MultiChain->error);
+exit();
 }
-
 
 // If you wish to make an SSL connection you can set an optional CA certificate or leave blank
 // This will set the protocol to HTTPS and some CURL flags
@@ -61,7 +61,7 @@ $MultiChain->getinfo();
 $MultiChain->getrawtransaction('0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098',1);
 $MultiChain->getblock('000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f');
 
-// if you called getinfo() at least once, the major version of multichaind is set as integer in 
+// if you called getinfo() at least once, the major version of multichaind is set as integer in
 // $this->versionMajor
 $res = $MultiChain->getinfo();
 if ($MultiChain->versionMajor == 2) {
@@ -69,7 +69,6 @@ if ($MultiChain->versionMajor == 2) {
 }
 echo("nodeversion: $MultiChain->nodeVersion\r\n");
 echo("protocolversion: $MultiChain->protocolVersion\r\n");
-
 
 // The full response (not usually needed) is stored in $this->response
 // while the raw JSON is stored in $this->raw_response
@@ -83,10 +82,9 @@ echo $MultiChain->error;
 // Example:
 echo $MultiChain->status;
 
-*/
+ */
 
-class MultiChain
-{
+class MultiChain {
     // Configuration options
     private $username;
     private $password;
@@ -118,45 +116,42 @@ class MultiChain
      * @param string $path
      * @param int $timeout
      */
-    public function __construct($username, $password, $host = 'localhost', $port = 2286, $path = null, $timeout = 10)
-    {
-        $this->username      = $username;
-        $this->password      = $password;
-        $this->host          = $host;
-        $this->port          = $port;
-        $this->path          = $path;
-        $this->timeout       = $timeout;
-        $this->versionMajor  = null;
-        $this->nodeVersion   = null;
+    public function __construct($username, $password, $host = 'localhost', $port = 2286, $path = null, $timeout = 10) {
+        $this->username = $username;
+        $this->password = $password;
+        $this->host = $host;
+        $this->port = $port;
+        $this->path = $path;
+        $this->timeout = $timeout;
+        $this->versionMajor = null;
+        $this->nodeVersion = null;
         $this->protocolVersion = null;
 
         // Set some defaults
-        $this->proto         = 'http';
+        $this->proto = 'http';
         $this->CACertificate = null;
-        
+
         if (!function_exists('curl_init')) {
-        	$this->error = 'curl not installed';
-        	$this->initOK = false;
+            $this->error = 'curl not installed';
+            $this->initOK = false;
         } else {
-        	$this->initOK = true;
-        }	
+            $this->initOK = true;
+        }
     }
 
     /**
      * @param string|null $certificate
      */
-    public function setSSL($certificate = null)
-    {
-        $this->proto         = 'https'; // force HTTPS
+    public function setSSL($certificate = null) {
+        $this->proto = 'https'; // force HTTPS
         $this->CACertificate = $certificate;
     }
 
-    public function __call($method, $params)
-    {
-        $this->status       = null;
-        $this->error        = null;
+    public function __call($method, $params) {
+        $this->status = null;
+        $this->error = null;
         $this->raw_response = null;
-        $this->response     = null;
+        $this->response = null;
 
         // If no parameters are passed, this will be an empty array
         $params = array_values($params);
@@ -168,21 +163,21 @@ class MultiChain
         $request = json_encode(array(
             'method' => $method,
             'params' => $params,
-            'id'     => $this->id
+            'id' => $this->id,
         ));
 
         // Build the cURL session
-        $curl    = curl_init("{$this->proto}://{$this->host}:{$this->port}/{$this->path}");
+        $curl = curl_init("{$this->proto}://{$this->host}:{$this->port}/{$this->path}");
         $options = array(
-            CURLOPT_HTTPAUTH       => CURLAUTH_BASIC,
-            CURLOPT_USERPWD        => $this->username . ':' . $this->password,
+            CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
+            CURLOPT_USERPWD => $this->username . ':' . $this->password,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 2, 
+            CURLOPT_MAXREDIRS => 2,
             CURLOPT_CONNECTTIMEOUT => $this->timeout,
-            CURLOPT_HTTPHEADER     => array('Content-type: application/json'),
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $request
+            CURLOPT_HTTPHEADER => array('Content-type: application/json'),
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $request,
         );
 
         // This prevents users from getting the following warning when open_basedir is set:
@@ -208,7 +203,7 @@ class MultiChain
 
         // Execute the request and decode to an array
         $this->raw_response = curl_exec($curl);
-        $this->response     = json_decode($this->raw_response, true);
+        $this->response = json_decode($this->raw_response, true);
 
         if ($method == 'getinfo') {
             if (isset($this->response['result']['version'][0])) {
@@ -240,25 +235,32 @@ class MultiChain
         } elseif ($this->status != 200) {
             // If MultiChaind didn't return a nice error message, we need to make our own
             switch ($this->status) {
-                case 400:
-                    $this->error = 'HTTP_BAD_REQUEST';
-                    break;
-                case 401:
-                    $this->error = 'HTTP_UNAUTHORIZED';
-                    break;
-                case 403:
-                    $this->error = 'HTTP_FORBIDDEN';
-                    break;
-                case 404:
-                    $this->error = 'HTTP_NOT_FOUND';
-                    break;
-// extended error codes corresponding to multichain/src/rpc/rpcprotocol.h                    
-                case 500:
-                    $this->error = 'HTTP_INTERNAL_SERVER_ERROR';
-                    break;
-                case 503:
-                    $this->error = 'HTTP_SERVICE_UNAVAILABLE';
-                    break;
+            case 400:
+                $this->error = 'HTTP_BAD_REQUEST';
+                break;
+            case 401:
+                $this->error = 'HTTP_UNAUTHORIZED';
+                break;
+            case 403:
+                $this->error = 'HTTP_FORBIDDEN';
+                break;
+            case 404:
+                $this->error = 'HTTP_NOT_FOUND';
+                break;
+// extended error codes corresponding to multichain/src/rpc/rpcprotocol.h
+            case 500:
+                $this->error = 'HTTP_INTERNAL_SERVER_ERROR';
+                break;
+            case 503:
+                $this->error = 'HTTP_SERVICE_UNAVAILABLE';
+                break;
+// no http status code responded (e.g. no http/s connection)
+            case 0:
+                $this->error = 'HTTP_STATUS_NULL';
+                break;
+// any other http status
+            default:
+                $this->error = 'HTTP_STATUS_OTHER: ' . $this->status;
             }
         }
 
