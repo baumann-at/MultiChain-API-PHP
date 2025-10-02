@@ -1,11 +1,14 @@
 <?php
 /*
 MultiChain API
-Copyright (c) 2018 baumann.at
+
+Copyright (c) 2018-2025 baumann.at
+
 V 1.0 (6.10.2018)
 V 1.1 (21.11.2018): new property "timeout" for socket connection
 V 1.2 (9.5.2022): documentation for params path and timeout; read nodeversion & protocolversion in call of getinfo()
 V 1.3 (7.7.2022): error messages for http status 0 and any other not defined so far
+V 1.4 (2.10.2025): added "connectTimeout" for socket connections and clarified difference to "timeout" (CURLOPT_TIMEOUT)
 
 Forked from EasyBitcoin-PHP, Copyright (c) 2013 Andrew LeCody
 https://github.com/aceat64/EasyMultiChain-PHP
@@ -37,13 +40,14 @@ THE SOFTWARE.
 ====================
 
 // Initialize MultiChain connection/object
-$MultiChain = new MultiChain('username','password','host','port', 'path', 'timeout');
+$MultiChain = new MultiChain('username','password','host', port, 'path', connectTimeout, timeout);
 // Defaults are:
 //    host = localhost
 //    port = 2286
 //    proto = http
 //  path = null
-//  timeout = 10
+//  connectTimeout = 5
+//  timeout = 30
 
 // Check, if initialization worked (i.e. curl is installed)
 if (!$MultiChain->initOK) {
@@ -92,6 +96,7 @@ class MultiChain {
     private $host;
     private $port;
     private $path;
+    private $connectTimeout;
     private $timeout;
     private $CACertificate;
 
@@ -114,25 +119,27 @@ class MultiChain {
      * @param int $port
      * @param string $proto
      * @param string $path
+     * @param int $connectTimeout
      * @param int $timeout
      */
-    public function __construct($username, $password, $host = 'localhost', $port = 2286, $path = null, $timeout = 10) {
-        $this->username = $username;
-        $this->password = $password;
-        $this->host = $host;
-        $this->port = $port;
-        $this->path = $path;
-        $this->timeout = $timeout;
-        $this->versionMajor = null;
-        $this->nodeVersion = null;
+    public function __construct($username, $password, $host = 'localhost', $port = 2286, $path = null, $connectTimeout = 5, $timeout = 30) {
+        $this->username        = $username;
+        $this->password        = $password;
+        $this->host            = $host;
+        $this->port            = $port;
+        $this->path            = $path;
+        $this->connectTimeout  = $connectTimeout;
+        $this->timeout         = $timeout;
+        $this->versionMajor    = null;
+        $this->nodeVersion     = null;
         $this->protocolVersion = null;
 
         // Set some defaults
-        $this->proto = 'http';
+        $this->proto         = 'http';
         $this->CACertificate = null;
 
-        if (!function_exists('curl_init')) {
-            $this->error = 'curl not installed';
+        if (! function_exists('curl_init')) {
+            $this->error  = 'curl not installed';
             $this->initOK = false;
         } else {
             $this->initOK = true;
@@ -143,15 +150,15 @@ class MultiChain {
      * @param string|null $certificate
      */
     public function setSSL($certificate = null) {
-        $this->proto = 'https'; // force HTTPS
+        $this->proto         = 'https'; // force HTTPS
         $this->CACertificate = $certificate;
     }
 
     public function __call($method, $params) {
-        $this->status = null;
-        $this->error = null;
+        $this->status       = null;
+        $this->error        = null;
         $this->raw_response = null;
-        $this->response = null;
+        $this->response     = null;
 
         // If no parameters are passed, this will be an empty array
         $params = array_values($params);
@@ -160,25 +167,26 @@ class MultiChain {
         $this->id++;
 
         // Build the request, it's ok that params might have any empty array
-        $request = json_encode(array(
+        $request = json_encode([
             'method' => $method,
             'params' => $params,
-            'id' => $this->id,
-        ));
+            'id'     => $this->id,
+        ]);
 
         // Build the cURL session
-        $curl = curl_init("{$this->proto}://{$this->host}:{$this->port}/{$this->path}");
-        $options = array(
-            CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
-            CURLOPT_USERPWD => $this->username . ':' . $this->password,
+        $curl    = curl_init("{$this->proto}://{$this->host}:{$this->port}/{$this->path}");
+        $options = [
+            CURLOPT_HTTPAUTH       => CURLAUTH_BASIC,
+            CURLOPT_USERPWD        => $this->username . ':' . $this->password,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 2,
-            CURLOPT_CONNECTTIMEOUT => $this->timeout,
-            CURLOPT_HTTPHEADER => array('Content-type: application/json'),
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $request,
-        );
+            CURLOPT_MAXREDIRS      => 2,
+            CURLOPT_CONNECTTIMEOUT => $this->connectTimeout,
+            CURLOPT_TIMEOUT        => $this->timeout,
+            CURLOPT_HTTPHEADER     => ['Content-type: application/json'],
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $request,
+        ];
 
         // This prevents users from getting the following warning when open_basedir is set:
         // Warning: curl_setopt() [function.curl-setopt]:
@@ -189,7 +197,7 @@ class MultiChain {
 
         if ($this->proto == 'https') {
             // If the CA Certificate was specified we change CURL to look for it
-            if (!empty($this->CACertificate)) {
+            if (! empty($this->CACertificate)) {
                 $options[CURLOPT_CAINFO] = $this->CACertificate;
                 $options[CURLOPT_CAPATH] = DIRNAME($this->CACertificate);
             } else {
@@ -203,7 +211,7 @@ class MultiChain {
 
         // Execute the request and decode to an array
         $this->raw_response = curl_exec($curl);
-        $this->response = json_decode($this->raw_response, true);
+        $this->response     = json_decode($this->raw_response, true);
 
         if ($method == 'getinfo') {
             if (isset($this->response['result']['version'][0])) {
@@ -225,7 +233,7 @@ class MultiChain {
 
         curl_close($curl);
 
-        if (!empty($curl_error)) {
+        if (! empty($curl_error)) {
             $this->error = $curl_error;
         }
 
