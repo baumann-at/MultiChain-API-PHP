@@ -17,7 +17,7 @@ Getting Started
 2. Initialize MultiChain connection/object:
 
     ```php
-    $MultiChain = new MultiChain('username','password','localhost','2286', null, 5);
+    $MultiChain = new MultiChain('username','password','localhost','2286', null, 5, 10);
     ```
     
     Check, if initialization worked (i.e. curl is installed)
